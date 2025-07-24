@@ -1,242 +1,265 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle, AlertCircle, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Upload, FileText, Check, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import Tesseract from 'tesseract.js';
 
-interface UploadedReceipt {
-  id: string;
-  fileName: string;
-  category: string;
-  amount: number;
-  status: 'processing' | 'verified' | 'rejected';
-  extractedData?: {
-    vendor: string;
-    date: string;
-    amount: number;
-    category: string;
-  };
+interface ExtractedData {
+  amount?: number;
+  date?: string;
+  purpose?: string;
+  taxSection?: string;
+  confidence?: number;
 }
 
-export const ReceiptUpload = () => {
-  const [uploadedReceipts, setUploadedReceipts] = useState<UploadedReceipt[]>([
-    {
-      id: '1',
-      fileName: 'health_insurance_premium.pdf',
-      category: '80D',
-      amount: 15000,
-      status: 'verified',
-      extractedData: {
-        vendor: 'Star Health Insurance',
-        date: '15 Jan 2024',
-        amount: 15000,
-        category: 'Health Insurance'
-      }
-    },
-    {
-      id: '2', 
-      fileName: 'lic_premium_receipt.pdf',
-      category: '80C',
-      amount: 25000,
-      status: 'processing'
-    }
-  ]);
-  
+interface ReceiptUploadProps {
+  onDeductionExtracted?: (data: ExtractedData) => void;
+}
+
+export const ReceiptUpload = ({ onDeductionExtracted }: ReceiptUploadProps) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const { toast } = useToast();
-  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const categorizePurpose = (text: string): { section: string; purpose: string } => {
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('lic') || lowerText.includes('insurance premium') || lowerText.includes('life insurance')) {
+      return { section: '80C', purpose: 'Life Insurance Premium' };
+    }
+    if (lowerText.includes('elss') || lowerText.includes('equity linked')) {
+      return { section: '80C', purpose: 'ELSS Investment' };
+    }
+    if (lowerText.includes('ppf') || lowerText.includes('public provident')) {
+      return { section: '80C', purpose: 'PPF Investment' };
+    }
+    if (lowerText.includes('health insurance') || lowerText.includes('medical insurance')) {
+      return { section: '80D', purpose: 'Health Insurance Premium' };
+    }
+    if (lowerText.includes('donation') || lowerText.includes('charity')) {
+      return { section: '80G', purpose: 'Charitable Donation' };
+    }
+    if (lowerText.includes('school fee') || lowerText.includes('tuition')) {
+      return { section: '80C', purpose: 'Tuition Fees' };
+    }
+    if (lowerText.includes('home loan') || lowerText.includes('housing loan')) {
+      return { section: '24', purpose: 'Home Loan Interest' };
+    }
+    
+    return { section: 'Other', purpose: 'General Expense' };
+  };
 
-    const file = files[0];
-    const newReceipt: UploadedReceipt = {
-      id: Date.now().toString(),
-      fileName: file.name,
-      category: 'Processing...',
-      amount: 0,
-      status: 'processing'
-    };
+  const extractAmountFromText = (text: string): number | null => {
+    // Look for various amount patterns
+    const patterns = [
+      /(?:rs\.?|₹)\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
+      /(?:amount|total|paid)\s*:?\s*(?:rs\.?|₹)?\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
+      /(\d+(?:,\d+)*(?:\.\d{2})?)\s*(?:rs\.?|₹)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        return parseFloat(match[1].replace(/,/g, ''));
+      }
+    }
+    
+    return null;
+  };
 
-    setUploadedReceipts(prev => [newReceipt, ...prev]);
+  const extractDateFromText = (text: string): string | null => {
+    const patterns = [
+      /(\d{1,2}[-/]\d{1,2}[-/]\d{4})/,
+      /(\d{4}[-/]\d{1,2}[-/]\d{1,2})/,
+      /(\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4})/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
 
-    // Simulate OCR processing
-    setTimeout(() => {
-      setUploadedReceipts(prev => 
-        prev.map(receipt => 
-          receipt.id === newReceipt.id
-            ? {
-                ...receipt,
-                category: '80C',
-                amount: Math.floor(Math.random() * 50000) + 5000,
-                status: 'verified',
-                extractedData: {
-                  vendor: 'Mock Vendor',
-                  date: new Date().toLocaleDateString(),
-                  amount: Math.floor(Math.random() * 50000) + 5000,
-                  category: 'Investment'
-                }
-              }
-            : receipt
-        )
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = e.target.files?.[0];
+    if (!uploadedFile) return;
+    
+    setFile(uploadedFile);
+    setIsProcessing(true);
+    setOcrProgress(0);
+    
+    try {
+      const { data: { text, confidence } } = await Tesseract.recognize(
+        uploadedFile,
+        'eng',
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setOcrProgress(Math.round(m.progress * 100));
+            }
+          }
+        }
       );
-
+      
+      // Extract relevant information
+      const amount = extractAmountFromText(text);
+      const date = extractDateFromText(text);
+      const { section, purpose } = categorizePurpose(text);
+      
+      const extractedInfo: ExtractedData = {
+        amount,
+        date,
+        purpose,
+        taxSection: section,
+        confidence: Math.round(confidence)
+      };
+      
+      setExtractedData(extractedInfo);
+      
       toast({
         title: "Receipt Processed",
-        description: "Data extracted successfully using AI OCR",
+        description: `Successfully extracted information with ${Math.round(confidence)}% confidence`,
       });
-    }, 2000);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleFileUpload(e.dataTransfer.files);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'verified':
-        return <CheckCircle className="h-5 w-5 text-success" />;
-      case 'processing':
-        return <AlertCircle className="h-5 w-5 text-warning animate-pulse" />;
-      case 'rejected':
-        return <X className="h-5 w-5 text-destructive" />;
-      default:
-        return <FileText className="h-5 w-5 text-muted-foreground" />;
+      
+    } catch (error) {
+      toast({
+        title: "Processing Failed",
+        description: "Could not extract text from the receipt",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+      setOcrProgress(0);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'verified':
-        return <Badge className="bg-success text-success-foreground">Verified</Badge>;
-      case 'processing':
-        return <Badge className="bg-warning text-warning-foreground">Processing</Badge>;
-      case 'rejected':
-        return <Badge className="bg-destructive text-destructive-foreground">Rejected</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
+  const handleApplyDeduction = () => {
+    if (extractedData) {
+      onDeductionExtracted?.(extractedData);
+      
+      toast({
+        title: "Deduction Applied",
+        description: `₹${extractedData.amount?.toLocaleString()} added to ${extractedData.taxSection} deductions`,
+      });
+      
+      // Reset the form
+      setExtractedData(null);
+      setFile(null);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Upload Area */}
-      <div
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${isDragging 
-            ? 'border-primary bg-primary-light' 
-            : 'border-border hover:border-primary/50'
-          }
-        `}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <Upload className="h-12 w-12 text-primary mx-auto mb-4" />
-        <h3 className="font-semibold mb-2">Upload Tax Documents</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Drag & drop receipts or click to browse
-        </p>
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          onChange={(e) => handleFileUpload(e.target.files)}
-          className="hidden"
-          id="file-upload"
-        />
-        <Button 
-          variant="outline" 
-          onClick={() => document.getElementById('file-upload')?.click()}
-        >
-          Choose Files
-        </Button>
-        <p className="text-xs text-muted-foreground mt-2">
-          Supports PDF, JPG, PNG • Max 10MB
-        </p>
-      </div>
-
-      {/* Uploaded Receipts */}
+    <Card className="p-6">
       <div className="space-y-4">
-        <h3 className="font-semibold">Recent Uploads</h3>
-        {uploadedReceipts.map((receipt) => (
-          <Card key={receipt.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {getStatusIcon(receipt.status)}
-                <div>
-                  <p className="font-medium">{receipt.fileName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {receipt.extractedData?.vendor || 'Processing...'}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2 mb-1">
-                  {receipt.amount > 0 && (
-                    <span className="font-semibold">₹{receipt.amount.toLocaleString()}</span>
-                  )}
-                  {getStatusBadge(receipt.status)}
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {receipt.category}
-                </Badge>
-              </div>
-            </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Smart Receipt Scanner</h3>
+          <p className="text-sm text-muted-foreground">
+            Upload receipts for automatic tax deduction extraction using OCR
+          </p>
+        </div>
 
-            {receipt.extractedData && receipt.status === 'verified' && (
-              <div className="mt-4 p-3 rounded-lg bg-success-light border border-success/20">
-                <p className="text-sm font-medium text-success mb-2">Extracted Data:</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Date:</span>
-                    <span className="ml-2">{receipt.extractedData.date}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Amount:</span>
-                    <span className="ml-2">₹{receipt.extractedData.amount.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
-
-      {/* OCR Features */}
-      <Card className="p-4 bg-primary-light border-primary/20">
-        <h3 className="font-semibold text-primary mb-3">AI-Powered OCR Features</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-success" />
-            <span>Auto-extract amounts & dates</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-success" />
-            <span>Categorize tax deductions</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-success" />
-            <span>Validate receipt authenticity</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-success" />
-            <span>Multi-language support</span>
+        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <div className="space-y-2">
+            <Label htmlFor="receipt-upload" className="cursor-pointer">
+              <span className="text-sm font-medium">
+                {file ? file.name : "Choose a receipt file"}
+              </span>
+            </Label>
+            <Input
+              id="receipt-upload"
+              type="file"
+              accept="image/*,.pdf"
+              onChange={handleFileUpload}
+              className="hidden"
+              disabled={isProcessing}
+            />
+            <p className="text-xs text-muted-foreground">
+              Supports JPG, PNG, PDF up to 5MB
+            </p>
           </div>
         </div>
-      </Card>
-    </div>
+
+        {isProcessing && (
+          <div className="text-center py-4">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-sm font-medium">Processing with OCR...</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${ocrProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{ocrProgress}% complete</p>
+          </div>
+        )}
+
+        {extractedData && (
+          <Card className="p-4 bg-success-light border-success/20">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Check className="h-5 w-5 text-success" />
+                <h4 className="font-medium">Extracted Information</h4>
+              </div>
+              <div className="flex gap-2">
+                <Badge variant="secondary">{extractedData.taxSection}</Badge>
+                <Badge variant="outline">{extractedData.confidence}% confidence</Badge>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              {extractedData.amount && (
+                <div>
+                  <span className="text-muted-foreground">Amount:</span>
+                  <p className="font-semibold">₹{extractedData.amount.toLocaleString()}</p>
+                </div>
+              )}
+              {extractedData.date && (
+                <div>
+                  <span className="text-muted-foreground">Date:</span>
+                  <p className="font-semibold">{extractedData.date}</p>
+                </div>
+              )}
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Purpose:</span>
+                <p className="font-semibold">{extractedData.purpose}</p>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleApplyDeduction} 
+              className="w-full"
+              disabled={!extractedData.amount}
+            >
+              Apply to Tax Deductions
+            </Button>
+          </Card>
+        )}
+
+        <div className="bg-muted/50 p-3 rounded-lg">
+          <h4 className="text-sm font-medium mb-2">Supported Documents:</h4>
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div>• LIC/Insurance receipts</div>
+            <div>• Health insurance bills</div>
+            <div>• ELSS investment receipts</div>
+            <div>• Donation receipts</div>
+            <div>• School fee receipts</div>
+            <div>• Home loan statements</div>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 };

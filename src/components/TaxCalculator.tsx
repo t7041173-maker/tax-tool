@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,12 +18,17 @@ interface TaxCalculation {
   netIncome: number;
 }
 
-export const TaxCalculator = () => {
+interface TaxCalculatorProps {
+  onTaxDataChange?: (data: any) => void;
+}
+
+export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
   const [income, setIncome] = useState(1200000);
   const [deductions80C, setDeductions80C] = useState(150000);
   const [deductions80D, setDeductions80D] = useState(25000);
   const [homeInterest, setHomeInterest] = useState(200000);
   const [hra, setHra] = useState(240000);
+  const [deductions80G, setDeductions80G] = useState(0);
   
   const calculateOldRegime = (): TaxCalculation => {
     const totalDeductions = Math.min(deductions80C, 150000) + 
@@ -97,6 +103,54 @@ export const TaxCalculator = () => {
   const newRegimeCalc = calculateNewRegime();
   const savings = oldRegimeCalc.totalTax - newRegimeCalc.totalTax;
 
+  // Update parent component with tax data
+  React.useEffect(() => {
+    if (onTaxDataChange) {
+      onTaxDataChange({
+        income,
+        deductions: {
+          section80C: deductions80C,
+          section80D: deductions80D,
+          section80G: deductions80G,
+          homeLoanInterest: homeInterest,
+        },
+        oldRegimeTax: oldRegimeCalc.totalTax,
+        newRegimeTax: newRegimeCalc.totalTax,
+        recommendation: savings > 0 ? 'Old Regime' : 'New Regime',
+        savings
+      });
+    }
+  }, [income, deductions80C, deductions80D, deductions80G, homeInterest, oldRegimeCalc.totalTax, newRegimeCalc.totalTax, savings, onTaxDataChange]);
+
+  // Function to handle bank data import
+  const handleBankDataImport = (bankData: any) => {
+    if (bankData.annualIncome) setIncome(bankData.annualIncome);
+    if (bankData.section80C) setDeductions80C(bankData.section80C);
+    if (bankData.section80D) setDeductions80D(bankData.section80D);
+    if (bankData.section80G) setDeductions80G(bankData.section80G);
+    if (bankData.homeLoanInterest) setHomeInterest(bankData.homeLoanInterest);
+  };
+
+  // Function to handle receipt OCR data
+  const handleReceiptData = (receiptData: any) => {
+    if (receiptData.amount && receiptData.taxSection) {
+      switch (receiptData.taxSection) {
+        case '80C':
+          setDeductions80C(prev => prev + receiptData.amount);
+          break;
+        case '80D':
+          setDeductions80D(prev => prev + receiptData.amount);
+          break;
+        case '80G':
+          setDeductions80G(prev => prev + receiptData.amount);
+          break;
+        case '24':
+          setHomeInterest(prev => prev + receiptData.amount);
+          break;
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Input Section */}
@@ -137,16 +191,27 @@ export const TaxCalculator = () => {
             />
           </div>
           
-          <div>
-            <Label htmlFor="homeInterest">Home Loan Interest (₹)</Label>
-            <Input
-              id="homeInterest"
-              type="number"
-              value={homeInterest}
-              onChange={(e) => setHomeInterest(Number(e.target.value))}
-              placeholder="Max ₹2,00,000"
-            />
-          </div>
+            <div>
+              <Label htmlFor="homeInterest">Home Loan Interest (₹)</Label>
+              <Input
+                id="homeInterest"
+                type="number"
+                value={homeInterest}
+                onChange={(e) => setHomeInterest(Number(e.target.value))}
+                placeholder="Max ₹2,00,000"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="deductions80g">80G Donations (₹)</Label>
+              <Input
+                id="deductions80g"
+                type="number"
+                value={deductions80G}
+                onChange={(e) => setDeductions80G(Number(e.target.value))}
+                placeholder="Charitable donations"
+              />
+            </div>
         </div>
       </div>
 
@@ -282,6 +347,23 @@ export const TaxCalculator = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Hidden props for parent components */}
+      <div style={{ display: 'none' }}>
+        {JSON.stringify({ handleBankDataImport, handleReceiptData })}
+      </div>
     </div>
   );
+};
+
+// Export the handler functions for use by parent components
+export const useTaxCalculatorHandlers = () => {
+  return {
+    handleBankDataImport: (bankData: any) => {
+      // This will be handled by the component instance
+    },
+    handleReceiptData: (receiptData: any) => {
+      // This will be handled by the component instance  
+    }
+  };
 };
