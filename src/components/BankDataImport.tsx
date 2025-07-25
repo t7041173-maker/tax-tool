@@ -21,7 +21,7 @@ export const BankDataImport = ({ onDataImport }: BankDataImportProps) => {
     // Simulate API call delay
     setTimeout(() => {
       setTransactions(mockTransactions);
-      const suggestions = getBankDataSuggestions();
+      const suggestions = getBankDataSuggestions(mockTransactions);
       
       toast({
         title: "Bank Data Imported",
@@ -33,7 +33,7 @@ export const BankDataImport = ({ onDataImport }: BankDataImportProps) => {
   };
 
   const handleApplySuggestions = () => {
-    const suggestions = getBankDataSuggestions();
+    const suggestions = getBankDataSuggestions(mockTransactions);
     onDataImport(suggestions);
     
     toast({
@@ -73,7 +73,7 @@ export const BankDataImport = ({ onDataImport }: BankDataImportProps) => {
                     <TableRow key={transaction.id}>
                       <TableCell className="text-sm">{transaction.date}</TableCell>
                       <TableCell className="text-sm">{transaction.description}</TableCell>
-                      <TableCell className={`text-sm font-medium ${transaction.amount > 0 ? 'text-success' : 'text-muted-foreground'}`}>
+                      <TableCell className={`text-sm font-medium ${transaction.amount > 0 ? 'text-success' : 'text-destructive'}`}>
                         ₹{Math.abs(transaction.amount).toLocaleString()}
                       </TableCell>
                       <TableCell>
@@ -89,18 +89,37 @@ export const BankDataImport = ({ onDataImport }: BankDataImportProps) => {
 
             <div className="bg-primary-light p-4 rounded-lg">
               <h4 className="font-medium mb-2">Auto-Detected Tax Data:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex flex-wrap gap-x-10 gap-y-2 text-sm items-end mb-4">
                 <div>
-                  <span className="text-muted-foreground">Annual Income:</span>
-                  <p className="font-semibold">₹{getBankDataSuggestions().annualIncome.toLocaleString()}</p>
+                  <span className="font-semibold text-foreground">Annual Income:</span>
+                  <p className="font-bold text-lg">₹{getBankDataSuggestions(mockTransactions).annualIncome.toLocaleString()}</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">80C Deductions:</span>
-                  <p className="font-semibold">₹{getBankDataSuggestions().section80C.toLocaleString()}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">80D Deductions:</span>
-                  <p className="font-semibold">₹{getBankDataSuggestions().section80D.toLocaleString()}</p>
+              </div>
+              <div className="mt-4">
+                <span className="text-muted-foreground font-semibold">Total Deductions:</span>
+                <p className="font-bold text-lg mb-2">₹{(
+                  getBankDataSuggestions(mockTransactions).section80C +
+                  getBankDataSuggestions(mockTransactions).section80D +
+                  getBankDataSuggestions(mockTransactions).section80G +
+                  getBankDataSuggestions(mockTransactions).homeLoanInterest
+                ).toLocaleString()}</p>
+                <div className="flex flex-wrap gap-x-10 gap-y-2 text-sm items-end">
+                  <div>
+                    <span className="font-semibold text-foreground">80C Deductions:</span>
+                    <p className="font-bold text-lg">₹{getBankDataSuggestions(mockTransactions).section80C.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">80D Deductions:</span>
+                    <p className="font-bold text-lg">₹{getBankDataSuggestions(mockTransactions).section80D.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">80G Donations:</span>
+                    <p className="font-bold text-lg">₹{getBankDataSuggestions(mockTransactions).section80G.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Home Loan Interest (24):</span>
+                    <p className="font-bold text-lg">₹{getBankDataSuggestions(mockTransactions).homeLoanInterest.toLocaleString()}</p>
+                  </div>
                 </div>
               </div>
               

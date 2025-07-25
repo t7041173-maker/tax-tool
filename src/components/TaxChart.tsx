@@ -1,28 +1,7 @@
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const taxBreakdownData = [
-  { name: 'Income Tax', value: 180000, color: '#0070ba' },
-  { name: 'Health & Education Cess', value: 7200, color: '#003087' },
-  { name: 'Net Income', value: 1012800, color: '#00a0e6' }
-];
-
-const deductionsData = [
-  { name: '80C (EPF, ELSS)', value: 150000, color: '#0070ba' },
-  { name: '80D (Health Ins.)', value: 25000, color: '#003087' },
-  { name: 'Home Loan Interest', value: 200000, color: '#00a0e6' },
-  { name: 'HRA', value: 240000, color: '#0099cc' },
-  { name: 'Standard Deduction', value: 50000, color: '#66b3ff' }
-];
-
-const yearlyComparisonData = [
-  { year: '2020-21', oldRegime: 195000, newRegime: 210000 },
-  { year: '2021-22', oldRegime: 205000, newRegime: 215000 },
-  { year: '2022-23', oldRegime: 165000, newRegime: 180000 },
-  { year: '2023-24', oldRegime: 187200, newRegime: 198500 },
-  { year: '2024-25', oldRegime: 187200, newRegime: 198500 }
-];
+import React from "react";
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -45,7 +24,33 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-export const TaxChart = () => {
+export interface TaxChartProps {
+  taxBreakdownData?: Array<{ name: string; value: number; color: string }>;
+  deductionsData?: Array<{ name: string; value: number; color: string }>;
+  yearlyComparisonData?: Array<any>;
+}
+
+export const TaxChart: React.FC<TaxChartProps> = ({
+  taxBreakdownData = [
+    { name: 'Income Tax', value: 180000, color: '#0070ba' },
+    { name: 'Health & Education Cess', value: 7200, color: '#003087' },
+    { name: 'Net Income', value: 1012800, color: '#00a0e6' }
+  ],
+  deductionsData = [
+    { name: '80C (EPF, ELSS)', value: 150000, color: '#0070ba' },
+    { name: '80D (Health Ins.)', value: 25000, color: '#003087' },
+    { name: 'Home Loan Interest', value: 200000, color: '#00a0e6' },
+    { name: 'HRA', value: 240000, color: '#0099cc' },
+    { name: 'Standard Deduction', value: 50000, color: '#66b3ff' }
+  ],
+  yearlyComparisonData = [
+    { year: '2020-21', oldRegime: 195000, newRegime: 210000 },
+    { year: '2021-22', oldRegime: 205000, newRegime: 215000 },
+    { year: '2022-23', oldRegime: 165000, newRegime: 180000 },
+    { year: '2023-24', oldRegime: 187200, newRegime: 198500 },
+    { year: '2024-25', oldRegime: 187200, newRegime: 198500 }
+  ]
+}) => {
   return (
     <Tabs defaultValue="breakdown" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -97,7 +102,7 @@ export const TaxChart = () => {
               <div className="pt-3 border-t border-border">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Annual Income:</span>
-                  <span>₹12,00,000</span>
+                  <span>₹{taxBreakdownData.reduce((acc, item) => item.name === 'Net Income' ? acc + item.value : acc, 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -132,15 +137,14 @@ export const TaxChart = () => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-lg bg-success-light">
               <p className="font-semibold text-success">Total Deductions</p>
-              <p className="text-2xl font-bold text-success">₹6,65,000</p>
+              <p className="text-2xl font-bold text-success">₹{deductionsData.reduce((acc, item) => acc + item.value, 0).toLocaleString()}</p>
             </div>
             <div className="p-4 rounded-lg bg-primary-light">
               <p className="font-semibold text-primary">Tax Savings</p>
-              <p className="text-2xl font-bold text-primary">₹1,99,500</p>
+              <p className="text-2xl font-bold text-primary">—</p>
             </div>
           </div>
         </Card>
@@ -173,25 +177,6 @@ export const TaxChart = () => {
               />
             </BarChart>
           </ResponsiveContainer>
-          
-          <div className="mt-6 text-center">
-            <div className="inline-flex items-center gap-6 p-4 rounded-lg bg-muted/50">
-              <div>
-                <p className="text-sm text-muted-foreground">Average Old Regime</p>
-                <p className="font-bold text-primary">₹1,87,880</p>
-              </div>
-              <div className="w-px h-8 bg-border" />
-              <div>
-                <p className="text-sm text-muted-foreground">Average New Regime</p>
-                <p className="font-bold text-primary">₹2,00,400</p>
-              </div>
-              <div className="w-px h-8 bg-border" />
-              <div>
-                <p className="text-sm text-muted-foreground">5-Year Savings</p>
-                <p className="font-bold text-success">₹62,600</p>
-              </div>
-            </div>
-          </div>
         </Card>
       </TabsContent>
     </Tabs>

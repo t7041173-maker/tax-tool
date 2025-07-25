@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,45 @@ import {
 } from "lucide-react";
 
 export const Dashboard = () => {
+  const [taxData, setTaxData] = useState<any | null>(null);
+
+  // Add all required state for TaxCalculator
+  const [income, setIncome] = useState("");
+  const [employmentType, setEmploymentType] = useState("salaried");
+  const [ageGroup, setAgeGroup] = useState("below60");
+  const [deductions80C, setDeductions80C] = useState(0);
+  const [deductions80D, setDeductions80D] = useState(0);
+  const [hraExemption, setHraExemption] = useState(0);
+  const [homeLoanInterest, setHomeLoanInterest] = useState(0);
+  const [educationLoanInterest, setEducationLoanInterest] = useState(0);
+  const [nps, setNps] = useState(0);
+  const [deductions80G, setDeductions80G] = useState(0);
+  const [regime, setRegime] = useState("new");
+  const [taxResult, setTaxResult] = useState(null);
+  const [isCalculated, setIsCalculated] = useState(false);
+
+  const handleTaxDataChange = (data: any) => {
+    setTaxData(data);
+  };
+
+  // Prepare dynamic chart data
+  const taxBreakdownData = taxData ? [
+    { name: 'Income Tax', value: taxData.regime === 'old' ? taxData.oldRegimeTax - (taxData.oldRegimeTax * 0.04) : taxData.newRegimeTax - (taxData.newRegimeTax * 0.04), color: '#0070ba' },
+    { name: 'Health & Education Cess', value: taxData.regime === 'old' ? taxData.oldRegimeTax * 0.04 : taxData.newRegimeTax * 0.04, color: '#003087' },
+    { name: 'Net Income', value: taxData.income - (taxData.regime === 'old' ? taxData.oldRegimeTax : taxData.newRegimeTax), color: '#00a0e6' }
+  ] : undefined;
+
+  const deductionsData = taxData ? [
+    { name: '80C (EPF, ELSS)', value: taxData.deductions.section80C, color: '#0070ba' },
+    { name: '80D (Health Ins.)', value: taxData.deductions.section80D, color: '#003087' },
+    { name: 'Home Loan Interest', value: taxData.deductions.homeLoanInterest, color: '#00a0e6' },
+    { name: 'HRA', value: taxData.deductions.hraExemption, color: '#0099cc' },
+    { name: 'Standard Deduction', value: taxData.deductions.standardDeduction, color: '#66b3ff' },
+    { name: '80G Donations', value: taxData.deductions.section80G, color: '#00b894' },
+    { name: 'NPS', value: taxData.deductions.nps, color: '#6c5ce7' },
+    { name: 'Education Loan Interest', value: taxData.deductions.educationLoanInterest, color: '#fdcb6e' }
+  ] : undefined;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -44,7 +84,9 @@ export const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Estimated Tax</p>
-                <p className="text-2xl font-bold text-primary">₹2,84,500</p>
+                <p className="text-2xl font-bold text-primary">
+                  {taxData ? `₹${taxData.regime === 'old' ? taxData.oldRegimeTax.toLocaleString() : taxData.newRegimeTax.toLocaleString()}` : '—'}
+                </p>
               </div>
               <Calculator className="h-8 w-8 text-primary" />
             </div>
@@ -54,7 +96,9 @@ export const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Potential Savings</p>
-                <p className="text-2xl font-bold text-success">₹45,000</p>
+                <p className="text-2xl font-bold text-success">
+                  {taxData ? `₹${taxData.savings.toLocaleString()}` : '—'}
+                </p>
               </div>
               <TrendingUp className="h-8 w-8 text-success" />
             </div>
@@ -96,7 +140,35 @@ export const Dashboard = () => {
                 </div>
               </div>
               <div className="p-6">
-                <TaxCalculator />
+                <TaxCalculator
+                  onTaxDataChange={handleTaxDataChange}
+                  income={income}
+                  setIncome={setIncome}
+                  employmentType={employmentType}
+                  setEmploymentType={setEmploymentType}
+                  ageGroup={ageGroup}
+                  setAgeGroup={setAgeGroup}
+                  deductions80C={deductions80C}
+                  setDeductions80C={setDeductions80C}
+                  deductions80D={deductions80D}
+                  setDeductions80D={setDeductions80D}
+                  hraExemption={hraExemption}
+                  setHraExemption={setHraExemption}
+                  homeLoanInterest={homeLoanInterest}
+                  setHomeLoanInterest={setHomeLoanInterest}
+                  educationLoanInterest={educationLoanInterest}
+                  setEducationLoanInterest={setEducationLoanInterest}
+                  nps={nps}
+                  setNps={setNps}
+                  deductions80G={deductions80G}
+                  setDeductions80G={setDeductions80G}
+                  regime={regime}
+                  setRegime={setRegime}
+                  taxResult={taxResult}
+                  setTaxResult={setTaxResult}
+                  isCalculated={isCalculated}
+                  setIsCalculated={setIsCalculated}
+                />
               </div>
             </Card>
 
@@ -109,7 +181,7 @@ export const Dashboard = () => {
                 </div>
               </div>
               <div className="p-6">
-                <TaxChart />
+                
               </div>
             </Card>
 

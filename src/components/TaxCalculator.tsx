@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TaxChart } from "./TaxChart";
 
 interface TaxCalculation {
   grossIncome: number;
@@ -21,23 +22,66 @@ interface TaxCalculation {
 
 interface TaxCalculatorProps {
   onTaxDataChange?: (data: any) => void;
+  income: string;
+  setIncome: (val: string) => void;
+  employmentType: string;
+  setEmploymentType: (val: string) => void;
+  ageGroup: string;
+  setAgeGroup: (val: string) => void;
+  deductions80C: number;
+  setDeductions80C: (val: number) => void;
+  deductions80D: number;
+  setDeductions80D: (val: number) => void;
+  hraExemption: number;
+  setHraExemption: (val: number) => void;
+  homeLoanInterest: number;
+  setHomeLoanInterest: (val: number) => void;
+  educationLoanInterest: number;
+  setEducationLoanInterest: (val: number) => void;
+  nps: number;
+  setNps: (val: number) => void;
+  deductions80G: number;
+  setDeductions80G: (val: number) => void;
+  regime: string;
+  setRegime: (val: string) => void;
+  taxResult: any;
+  setTaxResult: (val: any) => void;
+  isCalculated: boolean;
+  setIsCalculated: (val: boolean) => void;
 }
 
-export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
-  // Default empty/zero values as requested
-  const [income, setIncome] = useState("");
-  const [employmentType, setEmploymentType] = useState("salaried");
-  const [ageGroup, setAgeGroup] = useState("below60");
-  const [deductions80C, setDeductions80C] = useState(0);
-  const [deductions80D, setDeductions80D] = useState(0);
-  const [hraExemption, setHraExemption] = useState(0);
-  const [homeLoanInterest, setHomeLoanInterest] = useState(0);
-  const [educationLoanInterest, setEducationLoanInterest] = useState(0);
-  const [nps, setNps] = useState(0);
-  const [deductions80G, setDeductions80G] = useState(0);
-  const [regime, setRegime] = useState("new");
-  const [taxResult, setTaxResult] = useState<{old: TaxCalculation, new: TaxCalculation, savings: number} | null>(null);
-  const [isCalculated, setIsCalculated] = useState(false);
+export const TaxCalculator = ({
+  onTaxDataChange,
+  income,
+  setIncome,
+  employmentType,
+  setEmploymentType,
+  ageGroup,
+  setAgeGroup,
+  deductions80C,
+  setDeductions80C,
+  deductions80D,
+  setDeductions80D,
+  hraExemption,
+  setHraExemption,
+  homeLoanInterest,
+  setHomeLoanInterest,
+  educationLoanInterest,
+  setEducationLoanInterest,
+  nps,
+  setNps,
+  deductions80G,
+  setDeductions80G,
+  regime,
+  setRegime,
+  taxResult,
+  setTaxResult,
+  isCalculated,
+  setIsCalculated
+}: TaxCalculatorProps) => {
+  // Remove useState for taxResult and isCalculated
+
+  // Remove useState and useEffect for initialData
 
   const getAgeFromGroup = (ageGroup: string): number => {
     switch (ageGroup) {
@@ -151,11 +195,20 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
     const oldRegimeCalc = calculateOldRegime(annualIncome, userAge);
     const newRegimeCalc = calculateNewRegime(annualIncome);
     const savings = oldRegimeCalc.totalTax - newRegimeCalc.totalTax;
+    let recommendedRegime = 'New Regime';
+    if (oldRegimeCalc.totalTax < newRegimeCalc.totalTax) {
+      recommendedRegime = 'Old Regime';
+    } else if (oldRegimeCalc.totalTax > newRegimeCalc.totalTax) {
+      recommendedRegime = 'New Regime';
+    } else {
+      recommendedRegime = 'New Regime'; // or 'Both Equal'
+    }
 
     setTaxResult({
       old: oldRegimeCalc,
       new: newRegimeCalc,
-      savings
+      savings,
+      recommendedRegime
     });
     setIsCalculated(true);
 
@@ -177,7 +230,7 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
         regime,
         oldRegimeTax: oldRegimeCalc.totalTax,
         newRegimeTax: newRegimeCalc.totalTax,
-        recommendation: savings > 0 ? 'Old Regime' : 'New Regime',
+        recommendation: recommendedRegime,
         savings
       });
     }
@@ -197,6 +250,9 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
     setRegime("new");
     setTaxResult(null);
     setIsCalculated(false);
+    if (onTaxDataChange) {
+      onTaxDataChange(null);
+    }
   };
 
   // Function to handle bank data import
@@ -214,16 +270,16 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
     if (receiptData.amount && receiptData.taxSection) {
       switch (receiptData.taxSection) {
         case '80C':
-          setDeductions80C(prev => prev + receiptData.amount);
+          setDeductions80C(deductions80C + receiptData.amount);
           break;
         case '80D':
-          setDeductions80D(prev => prev + receiptData.amount);
+          setDeductions80D(deductions80D + receiptData.amount);
           break;
         case '80G':
-          setDeductions80G(prev => prev + receiptData.amount);
+          setDeductions80G(deductions80G + receiptData.amount);
           break;
         case '24':
-          setHomeLoanInterest(prev => prev + receiptData.amount);
+          setHomeLoanInterest(homeLoanInterest + receiptData.amount);
           break;
       }
     }
@@ -361,139 +417,181 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
       </div>
 
       {/* Results Section - Only show if calculated */}
-      {isCalculated && taxResult && (
-        <Tabs defaultValue="comparison" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="comparison">Comparison</TabsTrigger>
-            <TabsTrigger value="old">Old Regime</TabsTrigger>
-            <TabsTrigger value="new">New Regime</TabsTrigger>
-          </TabsList>
+      {isCalculated && taxResult ? (
+        <>
+          <Tabs defaultValue="comparison" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="comparison">Comparison</TabsTrigger>
+              <TabsTrigger value="old">Old Regime</TabsTrigger>
+              <TabsTrigger value="new">New Regime</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="comparison" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-6 bg-gradient-secondary border-primary/20">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">Old Regime</h3>
-                    <Badge variant="outline">With Deductions</Badge>
+            <TabsContent value="comparison" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="p-6 bg-gradient-secondary border-primary/20">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg">Old Regime</h3>
+                      <Badge variant="outline">With Deductions</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Tax:</span>
+                        <span className="font-semibold">₹{taxResult?.old?.totalTax?.toLocaleString?.() ?? "-"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Net Income:</span>
+                        <span className="font-semibold">₹{taxResult?.old?.netIncome?.toLocaleString?.() ?? "-"}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Tax:</span>
-                      <span className="font-semibold">₹{taxResult.old.totalTax.toLocaleString()}</span>
+                </Card>
+
+                <Card className="p-6 bg-gradient-secondary border-primary/20">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg">New Regime</h3>
+                      <Badge variant="outline">No Deductions</Badge>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Net Income:</span>
-                      <span className="font-semibold">₹{taxResult.old.netIncome.toLocaleString()}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Tax:</span>
+                        <span className="font-semibold">₹{taxResult?.new?.totalTax?.toLocaleString?.() ?? "-"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Net Income:</span>
+                        <span className="font-semibold">₹{taxResult?.new?.netIncome?.toLocaleString?.() ?? "-"}</span>
+                      </div>
                     </div>
+                  </div>
+                </Card>
+              </div>
+
+              <Card className={`p-6 ${taxResult.recommendedRegime === 'Old Regime' ? 'bg-success-light border-success/20' : 'bg-warning-light border-warning/20'}`}>
+                <div className="text-center">
+                  <p className="text-lg font-semibold mb-2">
+                    {taxResult.recommendedRegime === 'Old Regime'
+                      ? 'Old Regime Saves You'
+                      : taxResult.recommendedRegime === 'New Regime'
+                        ? 'New Regime Saves You'
+                        : 'Both Regimes Equal'}
+                  </p>
+                  <p className={`text-3xl font-bold ${taxResult.recommendedRegime === 'Old Regime' ? 'text-success' : 'text-warning'}`}>
+                    ₹{taxResult?.old && taxResult?.new ? Math.abs(taxResult.old.totalTax - taxResult.new.totalTax).toLocaleString() : "-"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Recommended: {taxResult.recommendedRegime}
+                  </p>
+                </div>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="old" className="space-y-4">
+              <Card className="p-6">
+                <h3 className="font-semibold text-lg mb-4">Old Regime Breakdown</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Gross Income:</span>
+                    <span className="font-semibold">₹{taxResult?.old?.grossIncome?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Deductions:</span>
+                    <span className="font-semibold text-success">-₹{taxResult?.old?.totalDeductions?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span>Taxable Income:</span>
+                    <span className="font-semibold">₹{taxResult?.old?.taxableIncome?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Income Tax:</span>
+                    <span className="font-semibold">₹{taxResult?.old?.incomeTax?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Health & Education Cess (4%):</span>
+                    <span className="font-semibold">₹{taxResult?.old?.cess?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg">
+                    <span className="font-semibold">Total Tax:</span>
+                    <span className="font-bold text-primary">₹{taxResult?.old?.totalTax?.toLocaleString?.() ?? "-"}</span>
                   </div>
                 </div>
               </Card>
+            </TabsContent>
 
-              <Card className="p-6 bg-gradient-secondary border-primary/20">
+            <TabsContent value="new" className="space-y-4">
+              <Card className="p-6">
+                <h3 className="font-semibold text-lg mb-4">New Regime Breakdown</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">New Regime</h3>
-                    <Badge variant="outline">No Deductions</Badge>
+                  <div className="flex justify-between">
+                    <span>Gross Income:</span>
+                    <span className="font-semibold">₹{taxResult?.new?.grossIncome?.toLocaleString?.() ?? "-"}</span>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Tax:</span>
-                      <span className="font-semibold">₹{taxResult.new.totalTax.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Net Income:</span>
-                      <span className="font-semibold">₹{taxResult.new.netIncome.toLocaleString()}</span>
-                    </div>
+                  <div className="flex justify-between">
+                    <span>Standard Deduction:</span>
+                    <span className="font-semibold text-success">-₹{taxResult?.new?.totalDeductions?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between">
+                    <span>Taxable Income:</span>
+                    <span className="font-semibold">₹{taxResult?.new?.taxableIncome?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Income Tax:</span>
+                    <span className="font-semibold">₹{taxResult?.new?.incomeTax?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Health & Education Cess (4%):</span>
+                    <span className="font-semibold">₹{taxResult?.new?.cess?.toLocaleString?.() ?? "-"}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg">
+                    <span className="font-semibold">Total Tax:</span>
+                    <span className="font-bold text-primary">₹{taxResult?.new?.totalTax?.toLocaleString?.() ?? "-"}</span>
                   </div>
                 </div>
               </Card>
+            </TabsContent>
+          </Tabs>
+
+          {/* Tax Chart Section */}
+          <div className="mt-8">
+            <div className="mb-2 text-center">
+              <span className="font-semibold">
+                {taxResult?.recommendedRegime === 'Old Regime'
+                  ? 'Showing Old Regime Tax Chart (Recommended)'
+                  : taxResult?.recommendedRegime === 'New Regime'
+                    ? 'Showing New Regime Tax Chart (Recommended)'
+                    : 'Both Regimes Equal'}
+              </span>
             </div>
-
-            <Card className={`p-6 ${taxResult.savings > 0 ? 'bg-success-light border-success/20' : 'bg-warning-light border-warning/20'}`}>
-              <div className="text-center">
-                <p className="text-lg font-semibold mb-2">
-                  {taxResult.savings > 0 ? 'Old Regime Saves You' : 'New Regime Saves You'}
-                </p>
-                <p className={`text-3xl font-bold ${taxResult.savings > 0 ? 'text-success' : 'text-warning'}`}>
-                  ₹{Math.abs(taxResult.savings).toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Recommended: {taxResult.savings > 0 ? 'Old Regime' : 'New Regime'}
-                </p>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="old" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="font-semibold text-lg mb-4">Old Regime Breakdown</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Gross Income:</span>
-                  <span className="font-semibold">₹{taxResult.old.grossIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Deductions:</span>
-                  <span className="font-semibold text-success">-₹{taxResult.old.totalDeductions.toLocaleString()}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span>Taxable Income:</span>
-                  <span className="font-semibold">₹{taxResult.old.taxableIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Income Tax:</span>
-                  <span className="font-semibold">₹{taxResult.old.incomeTax.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Health & Education Cess (4%):</span>
-                  <span className="font-semibold">₹{taxResult.old.cess.toLocaleString()}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Tax:</span>
-                  <span className="font-bold text-primary">₹{taxResult.old.totalTax.toLocaleString()}</span>
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="new" className="space-y-4">
-            <Card className="p-6">
-              <h3 className="font-semibold text-lg mb-4">New Regime Breakdown</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Gross Income:</span>
-                  <span className="font-semibold">₹{taxResult.new.grossIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Standard Deduction:</span>
-                  <span className="font-semibold text-success">-₹{taxResult.new.totalDeductions.toLocaleString()}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between">
-                  <span>Taxable Income:</span>
-                  <span className="font-semibold">₹{taxResult.new.taxableIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Income Tax:</span>
-                  <span className="font-semibold">₹{taxResult.new.incomeTax.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Health & Education Cess (4%):</span>
-                  <span className="font-semibold">₹{taxResult.new.cess.toLocaleString()}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Tax:</span>
-                  <span className="font-bold text-primary">₹{taxResult.new.totalTax.toLocaleString()}</span>
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+            <TaxChart
+              taxBreakdownData={[
+                taxResult?.recommendedRegime === 'Old Regime'
+                  ? { name: 'Income Tax', value: taxResult?.old?.totalTax - taxResult?.old?.cess, color: '#0070ba' }
+                  : { name: 'Income Tax', value: taxResult?.new?.totalTax - taxResult?.new?.cess, color: '#0070ba' },
+                taxResult?.recommendedRegime === 'Old Regime'
+                  ? { name: 'Health & Education Cess', value: taxResult?.old?.cess, color: '#003087' }
+                  : { name: 'Health & Education Cess', value: taxResult?.new?.cess, color: '#003087' },
+                taxResult?.recommendedRegime === 'Old Regime'
+                  ? { name: 'Net Income', value: Number(income) - taxResult?.old?.totalTax, color: '#00a0e6' }
+                  : { name: 'Net Income', value: Number(income) - taxResult?.new?.totalTax, color: '#00a0e6' }
+              ]}
+              deductionsData={[
+                { name: '80C (EPF, ELSS)', value: deductions80C, color: '#0070ba' },
+                { name: '80D (Health Ins.)', value: deductions80D, color: '#003087' },
+                { name: 'Home Loan Interest', value: homeLoanInterest, color: '#00a0e6' },
+                { name: 'HRA', value: hraExemption, color: '#0099cc' },
+                { name: 'Standard Deduction', value: 50000, color: '#66b3ff' },
+                { name: '80G Donations', value: deductions80G, color: '#00b894' },
+                { name: 'NPS', value: nps, color: '#6c5ce7' },
+                { name: 'Education Loan Interest', value: educationLoanInterest, color: '#fdcb6e' }
+              ]}
+            />
+          </div>
+        </>
+      ) : null}
 
       {/* Hidden props for parent components */}
       <div style={{ display: 'none' }}>
