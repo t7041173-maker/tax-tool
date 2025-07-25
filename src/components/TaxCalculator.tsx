@@ -98,6 +98,7 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
   };
 
   const calculateNewRegime = (annualIncome: number): TaxCalculation => {
+    // Standard deduction available for all individuals in New Regime (Budget 2023)
     const standardDeduction = 50000;
     const taxableIncome = Math.max(0, annualIncome - standardDeduction);
     
@@ -259,8 +260,8 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
               </SelectContent>
             </Select>
             {employmentType !== "salaried" && (
-              <p className="text-sm text-warning mt-1">
-                ⚠️ Standard Deduction (₹50,000) is only available for salaried individuals under Old Regime
+              <p className="text-sm text-muted-foreground mt-1">
+                ⚠️ Standard Deduction (₹50,000) only available for salaried individuals under Old Regime. Available for all under New Regime.
               </p>
             )}
           </div>
