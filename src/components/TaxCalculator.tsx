@@ -26,6 +26,7 @@ interface TaxCalculatorProps {
 export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
   // Default empty/zero values as requested
   const [income, setIncome] = useState("");
+  const [employmentType, setEmploymentType] = useState("salaried");
   const [ageGroup, setAgeGroup] = useState("below60");
   const [deductions80C, setDeductions80C] = useState(0);
   const [deductions80D, setDeductions80D] = useState(0);
@@ -48,7 +49,8 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
   };
 
   const calculateOldRegime = (annualIncome: number, userAge: number): TaxCalculation => {
-    const standardDeduction = 50000;
+    // Standard deduction only available for salaried employees
+    const standardDeduction = employmentType === "salaried" ? 50000 : 0;
     const totalDeductions = Math.min(deductions80C, 150000) + 
                            Math.min(deductions80D, userAge >= 60 ? 50000 : 25000) + 
                            Math.min(homeLoanInterest, 200000) + 
@@ -182,6 +184,7 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
 
   const handleReset = () => {
     setIncome("");
+    setEmploymentType("salaried");
     setAgeGroup("below60");
     setDeductions80C(0);
     setDeductions80D(0);
@@ -242,6 +245,26 @@ export const TaxCalculator = ({ onTaxDataChange }: TaxCalculatorProps) => {
             />
           </div>
           
+          <div>
+            <Label htmlFor="employmentType">Employment Type</Label>
+            <Select value={employmentType} onValueChange={setEmploymentType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select employment type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salaried">🔘 Salaried (Employed)</SelectItem>
+                <SelectItem value="self-employed">🔘 Self-Employed</SelectItem>
+                <SelectItem value="business">🔘 Business Owner</SelectItem>
+                <SelectItem value="freelancer">🔘 Freelancer</SelectItem>
+              </SelectContent>
+            </Select>
+            {employmentType !== "salaried" && (
+              <p className="text-sm text-warning mt-1">
+                ⚠️ Standard Deduction (₹50,000) is only available for salaried individuals under Old Regime
+              </p>
+            )}
+          </div>
+
           <div>
             <Label htmlFor="ageGroup">Age Group</Label>
             <Select value={ageGroup} onValueChange={setAgeGroup}>
