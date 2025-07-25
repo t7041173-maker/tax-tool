@@ -17,30 +17,39 @@ interface TaxGoal {
 const taxGoals: TaxGoal[] = [
   {
     id: '1',
-    title: 'Save ₹50,000 in taxes',
+    title: 'Save ₹50,000 in Taxes',
     target: 50000,
     current: 32000,
     category: 'Tax Savings',
-    deadline: '31 Mar 2024',
+    deadline: 'Complete before 31 Mar 2025',
     status: 'on-track'
   },
   {
     id: '2',
-    title: 'Maximize 80C deductions',
+    title: 'Maximize 80C (₹1.5L max)',
     target: 150000,
     current: 125000,
     category: 'Investment',
-    deadline: '31 Mar 2024',
+    deadline: 'Complete before 31 Mar 2025',
     status: 'behind'
   },
   {
     id: '3',
-    title: 'Health insurance optimization',
+    title: 'Optimize 80D Health Insurance',
     target: 25000,
     current: 25000,
     category: 'Insurance',
-    deadline: '31 Dec 2024',
+    deadline: 'Complete before 31 Mar 2025',
     status: 'completed'
+  },
+  {
+    id: '4',
+    title: 'Home Loan Deduction Progress',
+    target: 200000,
+    current: 150000,
+    category: 'Home Loan',
+    deadline: 'Complete before 31 Mar 2025',
+    status: 'on-track'
   }
 ];
 
@@ -127,6 +136,7 @@ export const TaxGoals = () => {
                     <span className="text-primary">
                       {goal.id === '1' ? 'Invest ₹18,000 more in ELSS' :
                        goal.id === '2' ? 'Need ₹25,000 more investment' :
+                       goal.id === '4' ? 'Need ₹50,000 more for maximum deduction' :
                        'Goal achieved!'}
                     </span>
                   </div>
@@ -136,28 +146,28 @@ export const TaxGoals = () => {
           })}
         </div>
 
-        {/* Goal Insights */}
+        {/* Smart AI-Powered Insights */}
         <div className="mt-6 p-4 rounded-lg bg-accent/50">
-          <h3 className="font-semibold text-accent-foreground mb-3">Smart Insights</h3>
+          <h3 className="font-semibold text-accent-foreground mb-3">Smart AI-Powered Insights</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <p>You're on track to save ₹45,000 this year with current investments</p>
+              <div className="w-2 h-2 rounded-full bg-success mt-2" />
+              <p>🎉 You're on track to save ₹46,000 this year with current investments</p>
             </div>
             <div className="flex items-start gap-2">
-              <div className="w-2 h-2 rounded-full bg-warning mt-2" />
-              <p>Consider increasing PPF contribution by ₹1,000/month to maximize 80C</p>
+              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+              <p>📊 Consider increasing ELSS by ₹1,000/month to max 80C deduction</p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 rounded-full bg-success mt-2" />
-              <p>Health insurance goal completed! Consider senior citizen coverage</p>
+              <p>✅ Health insurance target achieved! Consider senior citizen coverage</p>
             </div>
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Get Recommendations Button */}
         <Button className="w-full mt-6 bg-gradient-primary hover:bg-primary-hover">
-          Get Personalized Recommendations
+          Get Recommendations
         </Button>
       </div>
     </Card>

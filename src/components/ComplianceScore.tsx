@@ -13,51 +13,53 @@ interface ComplianceItem {
 
 const complianceItems: ComplianceItem[] = [
   {
-    name: 'Aadhaar-PAN Linkage',
+    name: 'Aadhaar-PAN Linked',
     status: 'completed',
     score: 20,
-    description: 'Aadhaar linked with PAN successfully'
+    description: 'Aadhaar successfully linked with PAN'
   },
   {
-    name: 'KYC Verification',
+    name: 'KYC Verified',
     status: 'completed',
     score: 15,
-    description: 'Bank KYC completed and verified'
+    description: 'Know Your Customer verification completed'
   },
   {
-    name: 'ITR Filing (Previous Year)',
+    name: 'ITR Filed (Previous Year)',
     status: 'completed',
     score: 25,
-    description: 'ITR filed for AY 2023-24'
+    description: 'Income Tax Return filed for FY 2023-24'
   },
   {
-    name: 'Advance Tax Payment',
+    name: 'Advance Tax Paid',
     status: 'pending',
-    score: 0,
-    description: 'Q3 advance tax due 15 Dec 2024'
+    score: 10,
+    description: 'Q4 advance tax payment due'
   },
   {
-    name: 'TDS Reconciliation',
+    name: 'TDS Reconciliation Done',
     status: 'completed',
     score: 15,
-    description: 'All TDS entries matched'
+    description: 'Form 26AS matched with Form 16'
   },
   {
-    name: 'Form 16 Upload',
+    name: 'Form 16 Uploaded',
     status: 'pending',
-    score: 0,
-    description: 'Upload latest Form 16'
+    score: 10,
+    description: 'Employer certificate pending upload'
   },
   {
-    name: 'E-Verification',
+    name: 'E-Verification Complete',
     status: 'failed',
-    score: 0,
-    description: 'ITR e-verification pending'
+    score: 15,
+    description: 'ITR e-verification not completed'
   }
 ];
 
 export const ComplianceScore = () => {
-  const totalScore = complianceItems.reduce((sum, item) => sum + item.score, 0);
+  const totalScore = complianceItems.reduce((sum, item) => {
+    return sum + (item.status === 'completed' ? item.score : 0);
+  }, 0);
   const maxScore = 100;
   
   const getStatusIcon = (status: string) => {
@@ -76,11 +78,11 @@ export const ComplianceScore = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
+        return <Badge className="bg-success text-success-foreground">✔ Completed</Badge>;
       case 'pending':
-        return <Badge className="bg-warning text-warning-foreground">Pending</Badge>;
+        return <Badge className="bg-warning text-warning-foreground">⚠ Pending</Badge>;
       case 'failed':
-        return <Badge className="bg-destructive text-destructive-foreground">Action Required</Badge>;
+        return <Badge className="bg-destructive text-destructive-foreground">❗ Action Required</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -102,16 +104,45 @@ export const ComplianceScore = () => {
       </div>
       
       <div className="p-6">
-        {/* Score Overview */}
+        {/* Circular Progress Score Display */}
         <div className="text-center mb-6">
-          <div className={`text-4xl font-bold mb-2 ${getScoreColor(totalScore)}`}>
-            {totalScore}/100
+          <div className="relative w-32 h-32 mx-auto mb-4">
+            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="transparent"
+                className="text-muted"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                r="50"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="transparent"
+                strokeDasharray={`${2 * Math.PI * 50}`}
+                strokeDashoffset={`${2 * Math.PI * 50 * (1 - totalScore / 100)}`}
+                className="text-primary transition-all duration-1000 ease-out"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <div className={`text-3xl font-bold ${getScoreColor(totalScore)}`}>
+                  {totalScore}
+                </div>
+                <div className="text-sm text-muted-foreground">out of 100</div>
+              </div>
+            </div>
           </div>
-          <Progress value={totalScore} className="w-full mb-4" />
-          <p className="text-sm text-muted-foreground">
-            {totalScore >= 80 ? 'Excellent compliance!' : 
-             totalScore >= 60 ? 'Good, but room for improvement' : 
-             'Needs immediate attention'}
+          <p className="text-lg font-semibold">
+            {totalScore >= 80 ? 'Excellent Compliance' : 
+             totalScore >= 60 ? 'Good Compliance' : 
+             'Needs Improvement'}
           </p>
         </div>
 

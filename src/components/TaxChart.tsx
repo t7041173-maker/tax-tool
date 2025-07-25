@@ -3,9 +3,9 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const taxBreakdownData = [
-  { name: 'Income Tax', value: 180000, color: '#0070ba' },
-  { name: 'Health & Education Cess', value: 7200, color: '#003087' },
-  { name: 'Net Income', value: 1012800, color: '#00a0e6' }
+  { name: 'Income Tax', value: 45000, color: '#8b5cf6' },
+  { name: 'Health & Education Cess', value: 1800, color: '#06b6d4' },
+  { name: 'Net Income After Tax', value: 653200, color: '#10b981' }
 ];
 
 const deductionsData = [
@@ -25,7 +25,7 @@ const yearlyComparisonData = [
 ];
 
 const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }: any) => {
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -45,6 +45,23 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
+// Custom tooltip for better value display
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-semibold">{data.name}</p>
+        <p className="text-primary">₹{data.value.toLocaleString()}</p>
+        <p className="text-sm text-muted-foreground">
+          {((data.value / taxBreakdownData.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const TaxChart = () => {
   return (
     <Tabs defaultValue="breakdown" className="w-full">
@@ -57,7 +74,7 @@ export const TaxChart = () => {
       <TabsContent value="breakdown" className="mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6">
-            <h3 className="font-semibold text-lg mb-4 text-center">Tax Distribution</h3>
+            <h3 className="font-semibold text-lg mb-4 text-center">Tax Breakdown Chart</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -67,6 +84,7 @@ export const TaxChart = () => {
                   labelLine={false}
                   label={renderCustomizedLabel}
                   outerRadius={100}
+                  innerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -74,13 +92,13 @@ export const TaxChart = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </Card>
 
           <Card className="p-6">
-            <h3 className="font-semibold text-lg mb-4">Tax Summary</h3>
+            <h3 className="font-semibold text-lg mb-4">Tax Summary with Dynamic Labels</h3>
             <div className="space-y-4">
               {taxBreakdownData.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
@@ -91,13 +109,18 @@ export const TaxChart = () => {
                     />
                     <span className="font-medium">{item.name}</span>
                   </div>
-                  <span className="font-semibold">₹{item.value.toLocaleString()}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">₹{item.value.toLocaleString()}</span>
+                    <p className="text-xs text-muted-foreground">
+                      {((item.value / taxBreakdownData.reduce((sum, i) => sum + i.value, 0)) * 100).toFixed(1)}%
+                    </p>
+                  </div>
                 </div>
               ))}
               <div className="pt-3 border-t border-border">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Annual Income:</span>
-                  <span>₹12,00,000</span>
+                  <span>₹7,00,000</span>
                 </div>
               </div>
             </div>
